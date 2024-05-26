@@ -1,0 +1,43 @@
+name: UnitTest on model classes
+
+on: [push, pull_request]
+
+jobs:
+  dls-catalog-service-tests:
+    name: DLS Catalog Service Tests
+    runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:3-management
+        ports:
+          - 5672:5672
+          - 15672:15672
+
+    steps:
+    - name: Checkout DLS Catalog Service Repository
+      uses: actions/checkout@v2
+      with:
+        repository: KEADLS2024/DLS_Catalog_Service_3.0
+        path: DLS_Catalog_Service_3.0
+        ref: master # Adjusted to use the correct branch name
+        token: ${{ secrets.PAT_TOKEN }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '7.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore DLS_Catalog_Service_3.0/DLS_Catalog_Service_3.0.sln
+
+    - name: Build
+      run: dotnet build DLS_Catalog_Service_3.0/DLS_Catalog_Service_3.0.sln --configuration Release
+
+    - name: Test
+      run: dotnet test DLS_Catalog_Service_3.0/DLS_Catalog_Service_3.0.Tests/DLS_Catalog_Service_3.0.Tests.csproj --configuration Release --logger "trx;LogFileName=test_results.trx" --filter FullyQualifiedName~UnitTest_Model.CategoryTests
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v2
+      with:
+        name: dls-catalog-service-test-results
+        path: DLS_Catalog_Service_3.0/DLS_Catalog_Service_3.0.Tests/TestResults/*.trx
